@@ -60,7 +60,12 @@ def _start_(fsm:FSM):
     print("\nSaved State pairs")
     fsm.printStatePairs()
 
-    fsm.load().fire()
+    #Dynamic method testing
+    fsm.fire()
+    fsm.load()
+
+    #Method sequential calling / Piping
+    fsm.load().aim().release()
 
     pass
 

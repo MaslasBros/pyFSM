@@ -24,7 +24,18 @@ class FSM:
             raise ValueError("Passed transition " + stateFunc.__name__ + " is registered as a state.")
         
         self.states.append(stateFunc)
-        setattr(self, stateFunc.__name__, stateFunc)
+        setattr(self, stateFunc.__name__, self._dynamicMethodWrapper(stateFunc))
+
+    def _dynamicMethodWrapper(self, stateFunc):
+        """
+        This method is a state function wrapper to add the self return at each state method.\n
+        This enables method piping support for the FSM.
+        """
+
+        def wrapper(*args, **kwargs) -> self:
+            stateFunc(*args, **kwargs)
+            return self
+        return wrapper
 
     def _addToTransitions(self, transFunc):
         """
