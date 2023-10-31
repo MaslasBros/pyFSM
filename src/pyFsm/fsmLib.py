@@ -45,8 +45,12 @@ def state(stateFunc):
 
 def transition(transFunc):
     """
-    Decorator used to add the decorated method to the transition list
+    Decorator used to add the decorated method to the transition list.
+    All transition methods must return a boolean value, which determines 
     """
+
+    """ if isinstance(transFunc(), bool) is not True:
+        raise ValueError("Transition \'" + transFunc.__name__ + "\' does not return a boolean to verify the transition.") """
 
     _addToTempTransitions(transFunc)
     return transFunc
@@ -55,13 +59,15 @@ def transition(transFunc):
 #region FSM Local
 class FSM:
     #@TODO: Integrate merparser
-    def __init__(self):
+    def __init__(self, initialState):
         """
         Constructs a FSM instance with empty states and transitions.\n
         """
 
         self._registerFsm()
 
+        self.initialState = initialState.__name__
+        self.currentState = self.initialState
         self.statePairs = []
         pass
 
@@ -81,26 +87,6 @@ class FSM:
         _gStates.append({})
         _gTransitions.append({})
 
-    def _retrieveStateFromCache(self, stateName:str):
-        """
-        Returns the cached state method from the global state cache, then deletes it.\n
-        """
-        
-        _cache = _stateCache[stateName]
-        #_stateCache[_cache] = None
-
-        return _cache
-    
-    def _retrieveTransitionFromCache(self, transitionName:str):
-        """
-        Returns the cached transition method from the global transition cache, then deletes it.\n
-        """
-
-        _cache = _transCache[transitionName]
-        #_transCache[_cache] = None
-
-        return _cache
-
     def createTransition(self, currentState, nextState, transition = None):
         """
         Creates a new state transition which the current state transits to the next state through the passed transition.\n
@@ -109,11 +95,11 @@ class FSM:
 
         #Checks for None transition
         if transition is not None:
-            _gTransitions[self.uid][transition.__name__] = self._retrieveTransitionFromCache(transition.__name__)
+            _gTransitions[self.uid][transition.__name__] = _transCache[transition.__name__]
 
         #Register the retrieved states and transitions to this FSM instance
-        _gStates[self.uid][currentState.__name__] = self._retrieveStateFromCache(currentState.__name__)
-        _gStates[self.uid][nextState.__name__] = self._retrieveStateFromCache(nextState.__name__)
+        _gStates[self.uid][currentState.__name__] = _stateCache[currentState.__name__]
+        _gStates[self.uid][nextState.__name__] = _stateCache[nextState.__name__]
         
         #Create the state-transition pairs
         self.statePairs.append((currentState, nextState, transition))
@@ -138,6 +124,7 @@ class FSM:
         """
 
         def wrapper(*args, **kwargs) -> self:
+            self.currentState = stateFunc.__name__
             stateFunc(*args, **kwargs)
             return self
         return wrapper
