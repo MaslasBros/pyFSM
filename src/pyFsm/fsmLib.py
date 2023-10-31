@@ -1,41 +1,46 @@
 #region Global
-_states = {}
-_transitions = {}
+_fsms = {} # Stores every fsm with a unique ID
 
-def _addToStates(stateFunc):
+_stateCache = {} # Stores the registered state methods
+_transCache = {} # stores the registered transitions methods
+
+_gStates = [] # Contains the state dictionaries of each FSM accessed by the FSMs UID
+_gTransitions = [] # Contains the transition dictionaries of each FSM accessed by the FSMs UID
+
+def _addToTempStates(stateFunc):
     """
     Adds the passed state function to the internal states list.\n
     Throws an error if the state function is already imported or registered as a state.
     """
 
-    if _states.get(stateFunc.__name__):
+    if _stateCache.get(stateFunc.__name__):
         raise ValueError("Passed state " + stateFunc.__name__ + " already imported.")
     
-    if _transitions.get(stateFunc.__name__):
+    if _transCache.get(stateFunc.__name__):
         raise ValueError("Passed transition " + stateFunc.__name__ + " is registered as a state.")
     
-    _states[stateFunc.__name__] = stateFunc
+    _stateCache[stateFunc.__name__] = stateFunc
 
-def _addToTransitions(transFunc):
+def _addToTempTransitions(transFunc):
     """
     Adds the passed transition function to the internal transitions list.\n
     Throws an error if the transition function is already imported or registered as a state.
     """
 
-    if _transitions.get(transFunc.__name__):
+    if _transCache.get(transFunc.__name__):
         raise ValueError("Passed transition " + transFunc.__name__ + " already imported.")
     
-    if _states.get(transFunc.__name__):
+    if _stateCache.get(transFunc.__name__):
         raise ValueError("Passed transition " + transFunc.__name__ + " is registered as a state.")
     
-    _transitions[transFunc.__name__] = transFunc
+    _transCache[transFunc.__name__] = transFunc
 
 def state(stateFunc):
     """
     Decorator used to add the decorated method to the states list
     """
 
-    _addToStates(stateFunc)
+    _addToTempStates(stateFunc)
     return stateFunc
 
 def transition(transFunc):
@@ -43,7 +48,7 @@ def transition(transFunc):
     Decorator used to add the decorated method to the transition list
     """
 
-    _addToTransitions(transFunc)
+    _addToTempTransitions(transFunc)
     return transFunc
 #endregion
 
@@ -55,19 +60,26 @@ class FSM:
         Constructs a FSM instance with empty states and transitions.\n
         """
 
+        self._registerFsm()
+
         self.statePairs = []
-        self._dynamicMethodCreator()
         pass
 
-    def _dynamicMethodCreator(self):
+    def _registerFsm(self):
         """
-        Adds a dynamic method for each state function from the _states dictionary
-        in this FSM instance. 
+        Registers the FSM instance to the global FSM cache of the script.\n
+        The UID of the FSM is also assigned here.\n
+        Raises an error in case the FSM is already registered.
         """
+        
+        self.uid = len(_fsms)
 
-        for stateFunc in _states:
-            setattr(self, stateFunc, self._dynamicMethodWrapper(_states[stateFunc]))
-        pass
+        if _fsms.get(self.uid):
+            raise KeyError("FSM with UID: " + self.uid + " already registered.")
+        
+        _fsms[self.uid] = self
+        _gStates.append({})
+        _gTransitions.append({})
 
     def _dynamicMethodWrapper(self, stateFunc):
         """
@@ -80,23 +92,66 @@ class FSM:
             return self
         return wrapper
 
+    def _retrieveStateFromCache(self, stateName:str):
+        """
+        Returns the cached state method from the global state cache, then deletes it.\n
+        """
+        
+        _cache = _stateCache[stateName]
+        #_stateCache[_cache] = None
+
+        return _cache
+    
+    def _retrieveTransitionFromCache(self, transitionName:str):
+        """
+        Returns the cached transition method from the global transition cache, then deletes it.\n
+        """
+
+        _cache = _transCache[transitionName]
+        #_transCache[_cache] = None
+
+        return _cache
+
     def createTransition(self, currentState, nextState, transition = None):
         """
         Creates a new state transition which the current state transits to the next state through the passed transition.\n
         If the passed transition is None, then the state transition is instant.
         """
 
-        self.statePairs.append((currentState,nextState, transition))
+        #Retrieve the states and transitions from the cache
+        _cState = self._retrieveStateFromCache(currentState.__name__)
+        _nState = self._retrieveStateFromCache(nextState.__name__)
+
+        #Checks for None transition
+        _trans = None
+        if transition is not None:
+            _trans = self._retrieveTransitionFromCache(transition.__name__)
+            _gTransitions[self.uid][_trans.__name__] = _trans
+
+        #Register the retrieved states and transitions to this FSM instance
+        _gStates[self.uid][_cState.__name__] = _cState
+        _gStates[self.uid][_nState.__name__] = _nState
+        
+        #Create the state-transition pairs
+        self.statePairs.append((_cState, _nState, _trans))
+
+        #Create the dynamic methods for the two new states
+        if getattr(self, _cState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][_cState.__name__])) is not None:
+            setattr(self, _cState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][_cState.__name__]))
+
+        if getattr(self, _nState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][_nState.__name__])) is not None:
+            setattr(self, _nState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][_nState.__name__]))
+
         return self
 
     #region UTILS
     def printStates(self):
-        for i in _states:
+        for i in _gStates[self.uid]:
             print(i)
         pass
 
     def printTransitions(self):
-        for i in _transitions:
+        for i in _gTransitions[self.uid]:
             print(i)
         pass
 

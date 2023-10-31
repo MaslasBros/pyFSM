@@ -45,10 +45,39 @@ def release():
 
 def _start_():
     fsm = FSM()
+    fsm1 = FSM()
+    fsm2 = FSM()
+    fsm3 = FSM()
 
+    #Multiple FSMs declaration
+    print("FSM0 declarations")
     fsm.createTransition(idle, load, loading)
-    fsm.createTransition(load, aim, aiming)
-    fsm.createTransition(aim, fire)
+    fsm.printStates()
+    fsm.printTransitions()
+    fsm.printStatePairs()
+
+    print("\nFSM2 declarations")
+    fsm2.createTransition(aim, fire, aiming)
+    #Tests on the same method in different FSMs assignement
+    fsm2.createTransition(idle, load, loading)
+    fsm2.createTransition(load, aim)
+
+    fsm2.printStates()
+    fsm2.printTransitions()
+    fsm2.printStatePairs()
+
+    #Piping and dynamic methods tests
+    print("\nFSM piping and dynamic method calling")
+    fsm.idle()
+    fsm.load()
+
+    fsm.idle().load()
+
+    print("\nFSM2 piping and dynamic method calling")
+    fsm2.aim()
+    fsm2.fire()
+
+    fsm2.aim().fire()
     pass
 
 if __name__ == '__main__':
