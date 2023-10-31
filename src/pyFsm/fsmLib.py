@@ -81,17 +81,6 @@ class FSM:
         _gStates.append({})
         _gTransitions.append({})
 
-    def _dynamicMethodWrapper(self, stateFunc):
-        """
-        This method is a state function wrapper to add the self return at each state method.\n
-        This enables method piping support for the FSM.
-        """
-
-        def wrapper(*args, **kwargs) -> self:
-            stateFunc(*args, **kwargs)
-            return self
-        return wrapper
-
     def _retrieveStateFromCache(self, stateName:str):
         """
         Returns the cached state method from the global state cache, then deletes it.\n
@@ -118,31 +107,40 @@ class FSM:
         If the passed transition is None, then the state transition is instant.
         """
 
-        #Retrieve the states and transitions from the cache
-        _cState = self._retrieveStateFromCache(currentState.__name__)
-        _nState = self._retrieveStateFromCache(nextState.__name__)
-
         #Checks for None transition
-        _trans = None
         if transition is not None:
-            _trans = self._retrieveTransitionFromCache(transition.__name__)
-            _gTransitions[self.uid][_trans.__name__] = _trans
+            _gTransitions[self.uid][transition.__name__] = self._retrieveTransitionFromCache(transition.__name__)
 
         #Register the retrieved states and transitions to this FSM instance
-        _gStates[self.uid][_cState.__name__] = _cState
-        _gStates[self.uid][_nState.__name__] = _nState
+        _gStates[self.uid][currentState.__name__] = self._retrieveStateFromCache(currentState.__name__)
+        _gStates[self.uid][nextState.__name__] = self._retrieveStateFromCache(nextState.__name__)
         
         #Create the state-transition pairs
-        self.statePairs.append((_cState, _nState, _trans))
+        self.statePairs.append((currentState, nextState, transition))
 
         #Create the dynamic methods for the two new states
-        if getattr(self, _cState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][_cState.__name__])) is not None:
-            setattr(self, _cState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][_cState.__name__]))
+        if getattr(self, currentState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][currentState.__name__])) is not None:
+            setattr(self, currentState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][currentState.__name__]))
 
-        if getattr(self, _nState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][_nState.__name__])) is not None:
-            setattr(self, _nState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][_nState.__name__]))
+        if getattr(self, nextState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][nextState.__name__])) is not None:
+            setattr(self, nextState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][nextState.__name__]))
 
         return self
+
+    def createTransitionFromDiagram(self, mermaidDiagram:str):
+        #@TODO:
+        pass
+
+    def _dynamicMethodWrapper(self, stateFunc):
+        """
+        This method is a state function wrapper to add the self return at each state method.\n
+        This enables method piping support for the FSM.
+        """
+
+        def wrapper(*args, **kwargs) -> self:
+            stateFunc(*args, **kwargs)
+            return self
+        return wrapper
 
     #region UTILS
     def printStates(self):
