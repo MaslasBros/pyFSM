@@ -52,8 +52,6 @@ def _start_():
     fsm.createTransition(aim, fire)
     fsm.createTransition(fire, idle)
 
-    fsm.idle().load()
-
     pass
 
 if __name__ == '__main__':

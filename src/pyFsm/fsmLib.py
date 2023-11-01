@@ -1,3 +1,5 @@
+from .heuristics import *
+
 #region Global
 _fsms = {} # Stores every fsm with a unique ID
 
@@ -69,6 +71,7 @@ class FSM:
         self.initialState = initialState.__name__
         self.currentState = self.initialState
         self.statePairs = []
+        self.routes = {}
         pass
 
     def _registerFsm(self):
@@ -111,6 +114,8 @@ class FSM:
         if getattr(self, nextState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][nextState.__name__])) is not None:
             setattr(self, nextState.__name__, self._dynamicMethodWrapper(_gStates[self.uid][nextState.__name__]))
 
+        self._buildRoutesGraph()
+
         return self
 
     def createTransitionFromDiagram(self, mermaidDiagram:str):
@@ -128,6 +133,15 @@ class FSM:
             stateFunc(*args, **kwargs)
             return self
         return wrapper
+
+    def _buildRoutesGraph(self):
+        """
+        Creates the routes graph containing all possible state transitions along with their shortest routes and transitions.
+        """
+        
+        graph = buildStateGraph(self.statePairs)
+        self.routes = findShortestRoutes(graph)
+        pass
 
     #region UTILS
     def printStates(self):
