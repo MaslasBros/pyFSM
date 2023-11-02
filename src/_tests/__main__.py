@@ -1,56 +1,85 @@
 import sys
 import os
+from traceback import print_tb
 
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(src_dir)
 
-from pyFsm.fsmLib import *
+from pyFsm import *
+from time import sleep
 
 #The FSM transitions
 @transition
 def loading():
-    print("Method loading")
-    return True
+    print("Loading...")
+    sleep(1)
+    pass
 
 @transition
 def aiming():
-    print("Method aiming")
-    return True
+    print("Aiming...")
+    sleep(2)
+    pass
 
 # The FSM states
 @state
 def idle():
-    print("Method idle")
+    print("Idling...")
     pass
 
 @state
-def fire():
-    print("Method fire")
+def fire(shots):
+    print("{} Shots fired!".format(shots))
     pass
 
 @state
 def aim():
-    print("Method aim")
+    print("Aimed.")
     pass
 
 @state
 def load():
-    print("Method load")
+    print("Loaded")
     pass
 
 @state
 def release():
-    print("Method release")
+    print("Released")
+    pass
+
+def callOnStateReached():
+    print("Reached a state")
+    pass
+
+def callOnDestReached():
+    print("Reached the destination")
     pass
 
 def _start_():
-    fsm = FSM(idle)
+    global toShoot 
+    toShoot = 2 
+
+    fsm = FSM(idle) # initial state of the FSM
 
     fsm.createTransition(idle, load, loading)
     fsm.createTransition(idle, release)
     fsm.createTransition(load, aim, aiming)
     fsm.createTransition(aim, fire)
     fsm.createTransition(fire, idle)
+
+    fsm.onStateReached(callOnStateReached)
+    fsm.onDestinationReached(callOnDestReached)
+
+    """ for i in fsm._routes.items():
+        print(i) """
+    
+    print("Current state {}".format(fsm.getCurrentFsmState()))
+    fsm.fire(toShoot).idle().aim()
+
+    print("Reseting FSM...")
+    fsm.forceResetFSM()
+
+    print("Current state {}".format(fsm.getCurrentFsmState()))
 
     pass
 
