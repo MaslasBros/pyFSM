@@ -35,18 +35,18 @@ class FSM:
         """
         return self._fsmInternalState
 
-    def onStateReached(self, func):
+    def onStateReached(self, *func):
         """
-        Adds the passed function as an event callback of the state reached event.
+        Adds the passed functions as an event callback of the state reached event.
         """
-        self._eventHandler.subscribeToEvent(self.EVENT_STATE_REACHED_NAME, func)
+        self._eventHandler.subscribeToEvent(self.EVENT_STATE_REACHED_NAME, *func)
         pass
 
-    def onDestinationReached(self, func):
+    def onDestinationReached(self, *func):
         """
         Adds the passed function as an event callback of the destination reached event.
         """
-        self._eventHandler.subscribeToEvent(self.EVENT_DESTINATION_REACHED_NAME, func)
+        self._eventHandler.subscribeToEvent(self.EVENT_DESTINATION_REACHED_NAME, *func)
         pass
 
     def __init__(self, initialState):

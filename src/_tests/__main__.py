@@ -51,8 +51,16 @@ def callOnStateReached():
     print("Reached a state")
     pass
 
+def callOnStateReached2():
+    print("Reached a state 2")
+    pass
+
 def callOnDestReached():
     print("Reached the destination")
+    pass
+
+def callOnDestReached2():
+    print("Reached the destination2")
     pass
 
 def _start_():
@@ -67,8 +75,8 @@ def _start_():
     fsm.createTransition(aim, fire)
     fsm.createTransition(fire, idle)
 
-    fsm.onStateReached(callOnStateReached)
-    fsm.onDestinationReached(callOnDestReached)
+    fsm.onStateReached(callOnStateReached, callOnStateReached2)
+    fsm.onDestinationReached(callOnDestReached, callOnDestReached2)
 
     """ for i in fsm._routes.items():
         print(i) """

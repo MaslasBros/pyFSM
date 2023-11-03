@@ -21,11 +21,13 @@ class EventDispatcher:
 
         return temp
 
-    def subscribeToEvent(self, eventName:str, method):
+    def subscribeToEvent(self, eventName:str, *method):
         """
-        Adds the passed handler method to the passed event.
+        Adds the passed handler methods to the passed event.
         """
-        self.handlers[eventName].append(method)
+
+        for func in method:
+            self.handlers[eventName].append(func)
         pass
 
     def raiseEvent(self, eventName:str):
