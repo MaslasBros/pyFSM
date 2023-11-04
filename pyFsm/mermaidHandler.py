@@ -1,7 +1,7 @@
 from .fsmGlobals import *
 
 #Merparser import
-from prs import *
+from .pyStateGram import *
 
 class MermaidHandler:
     """
