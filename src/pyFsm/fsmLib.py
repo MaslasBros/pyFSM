@@ -2,6 +2,8 @@
 from .fsmGlobals import *
 from .heuristics import *
 from .eventHandler import *
+#Merparser integration
+from .mermaidHandler import *
 
 #Python relative
 from enum import Enum
@@ -52,16 +54,20 @@ class FSM:
     def __init__(self, initialState):
         """
         Constructs a FSM instance with empty states and transitions.\n
+        The initial state must either be the state string name or the state function.
         """
 
         self._registerFsm()
         self._eventHandler = EventDispatcher(self.EVENT_STATE_REACHED_NAME, self.EVENT_DESTINATION_REACHED_NAME)
         self._fsmInternalState = FSMStates.IN_INITIAL_STATE
 
-        self.initialState = initialState.__name__
+        self.initialState = initialState.__name__ if not isinstance(initialState, str) else initialState
         self.currentGraphState = self.initialState
         self._statePairs = []
         self._routes = {}
+
+        #Merparser integration
+        self.mermaidHandler = MermaidHandler(self)
         pass
 
     def _registerFsm(self):
@@ -109,8 +115,19 @@ class FSM:
 
         return self
 
-    def createTransitionFromDiagram(self, mermaidDiagram:str):
-        #@TODO:
+    def createTransitionsFromDiagram(self, mermaidDiagram:str):
+        """
+        Dynamically creates the states and transitions from the provided mermaid diagram.\n
+        Diagram Sample:\n
+        
+        ```text
+        stateDiagram-v2\n
+            idle --> load: "loading" - state transition with a transition method named "loading" \n
+            idle --> release - state transitions with no transition method \n
+            load --> aim: "aiming" - state transition with a transition method named "aiming" \n
+        ```
+        """
+        self.mermaidHandler.createTransitionsFromDiagram(mermaidDiagram)
         pass
 
     def _dynamicMethodWrapper(self, stateFunc):
