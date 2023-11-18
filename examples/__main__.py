@@ -87,8 +87,6 @@ def _start_():
     fsm = FSM(idle)
     fsm.createTransitionsFromDiagram(_stateDiagramTest)
 
-    fsm.fire(toShoot).idle().aim().fire(5).idle()
-
     #Simulating of the callback from an external call
     fsm.fire(toShoot)
     fsm.continueTraversal() #CB for Load

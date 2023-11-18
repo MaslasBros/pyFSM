@@ -7,7 +7,6 @@ from .mermaidHandler import *
 
 #Python relative
 from enum import Enum
-from threading import Thread
 
 #region FSM Local
 class FSMStates(Enum):
@@ -19,6 +18,7 @@ class FSMStates(Enum):
     IN_INITIAL_STATE = 0, # When in the initial state
     IN_RUNNING_STATE = 1, # When running a state
     IN_TRANSITION = 2, # When in a transition
+    WAITING_FOR_CB = 3,
     pass
 
 class FSM:
@@ -65,6 +65,7 @@ class FSM:
         self.currentGraphState = self.initialState
         self._statePairs = []
         self._routes = {}
+        self._cachedDestState = None
 
         #Merparser integration
         self.mermaidHandler = MermaidHandler(self)
@@ -93,23 +94,26 @@ class FSM:
         If the passed transition is None, then the state transition is instant.
         """
 
+        cStateName = currentState[0].__name__
+        nStateName = nextState[0].__name__
+
         #Checks for None transition
         if transition is not None:
             gTransitions[self.uid][transition.__name__] = transCache[transition.__name__]
 
         #Register the retrieved states and transitions to this FSM instance
-        gStates[self.uid][currentState.__name__] = stateCache[currentState.__name__]
-        gStates[self.uid][nextState.__name__] = stateCache[nextState.__name__]
+        gStates[self.uid][cStateName] = stateCache[cStateName]
+        gStates[self.uid][nStateName] = stateCache[nStateName]
         
         #Create the state-transition pairs
-        self._statePairs.append((currentState, nextState, transition))
+        self._statePairs.append((currentState[0], nextState[0], transition))
 
         #Create the dynamic methods for the two new states
-        if getattr(self, currentState.__name__, self._dynamicMethodWrapper(gStates[self.uid][currentState.__name__])) is not None:
-            setattr(self, currentState.__name__, self._dynamicMethodWrapper(gStates[self.uid][currentState.__name__]))
+        if getattr(self,cStateName, self._dynamicMethodWrapper(gStates[self.uid][cStateName])) is not None:
+            setattr(self, cStateName, self._dynamicMethodWrapper(gStates[self.uid][cStateName]))
 
-        if getattr(self, nextState.__name__, self._dynamicMethodWrapper(gStates[self.uid][nextState.__name__])) is not None:
-            setattr(self, nextState.__name__, self._dynamicMethodWrapper(gStates[self.uid][nextState.__name__]))
+        if getattr(self, nStateName, self._dynamicMethodWrapper(gStates[self.uid][nStateName])) is not None:
+            setattr(self, nStateName, self._dynamicMethodWrapper(gStates[self.uid][nStateName]))
 
         self._buildRoutesGraph()
 
@@ -130,19 +134,18 @@ class FSM:
         self.mermaidHandler.createTransitionsFromDiagram(mermaidDiagram)
         pass
 
-    def _dynamicMethodWrapper(self, stateFunc):
+    def _dynamicMethodWrapper(self, stateFuncTupple):
         """
         This method is a state function wrapper to add the self return at each state method.\n
         This enables method piping support for the FSM.
         """
 
         def wrapper(*args, **kwargs) -> self:
-            if self.currentGraphState is not stateFunc.__name__:
-                self._traverseToState(stateFunc.__name__, *args, *kwargs)
-            else:
-                self._setInternalFsmState(FSMStates.IN_RUNNING_STATE)
-                self._runFunctionInThread(stateFunc, *args, **kwargs)
-                self._determineInternalFsmState()
+            #Do not continue on the next state if the currentState is waiting for a callback
+            if self.getInternalFsmState() is FSMStates.WAITING_FOR_CB:
+                return
+
+            self._traverseToState(stateFuncTupple[0].__name__, *args, *kwargs)
             return self
         return wrapper
 
@@ -161,41 +164,47 @@ class FSM:
         Args and kwargs are passed only in the requested destination state and not in the states in-between.\n
         """
         
+        self._cachedDestState = (destStateName, *args, *kwargs)
         route = self._routes[self.currentGraphState][destStateName]
         #print("Route to {} is {}".format(destStateName, str(route)))
 
-        #iterates in the state-transition tuples inside the route list
-        for state, trans in route: 
+        #iterates in the state-transition tuples inside the route queue
+        for stateTupple, trans in route:
             if trans is not None:
                 self._setInternalFsmState(FSMStates.IN_TRANSITION)
-                self._runFunctionInThread(gTransitions[self.uid][trans])
-                self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
-                
-            self._setInternalFsmState(FSMStates.IN_RUNNING_STATE)
-            if state is destStateName:
-                self._runFunctionInThread(gStates[self.uid][state], *args, **kwargs)
-                self._eventHandler.raiseEvent(self.EVENT_DESTINATION_REACHED_NAME)
-            else:
-                self._runFunctionInThread(gStates[self.uid][state])
+                gTransitions[self.uid][trans]()
                 self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
 
-            self.currentGraphState = state
+    
+            self._setInternalFsmState(FSMStates.IN_RUNNING_STATE)
+
+            state, wfc = gStates[self.uid][stateTupple]
+
+            if state.__name__ is destStateName:
+                self._eventHandler.raiseEvent(self.EVENT_DESTINATION_REACHED_NAME)
+                state(*args, **kwargs)
+            else:
+                self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
+                state()
+
+            self.currentGraphState = state.__name__
             self._determineInternalFsmState()
+
+            #Do not continue on the next state if the currentState is waiting for a callback
+            if wfc:
+                self._setInternalFsmState(FSMStates.WAITING_FOR_CB)
+                print("Waiting for state cb")
+                break
         pass
     
-    def _runFunctionInThread(self, function, *args, **kwargs):
-        """
-        Runs the passed function in a new thread and waits for its completion.\n
-        Args and kwaargs can be None.
-        """
+    def continueTraversal(self):
+        '''
+        Pass this method as a callback function to an external source to continue with
+        the FSMs normal traversing flow. 
+        '''
         
-        if len(args) != 0:
-            thread = Thread(target = function,  args = args, kwargs = kwargs)
-        else:
-            thread = Thread(target = function)
-
-        thread.start()
-        thread.join()
+        self._setInternalFsmState(FSMStates.IDLING)
+        self._traverseToState(self._cachedDestState[0], self._cachedDestState[1])
         pass
 
     def _determineInternalFsmState(self):
@@ -214,6 +223,14 @@ class FSM:
         """
         self._fsmInternalState = newState 
         pass
+
+    def forceChangeState(self, stateName:str, *args, **kwargs):
+        """
+        Forcefully call and set the current state of the FSM to the passed state name.
+        """
+        self._setInternalFsmState(FSMStates.IDLING)
+        self.currentGraphState = stateName
+        gStates[self.uid][self.currentGraphState][0](*args, **kwargs)
 
     def forceResetFSM(self):
         """

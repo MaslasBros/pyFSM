@@ -6,7 +6,7 @@ transCache = {} # stores the registered transitions methods
 gStates = [] # Contains the state dictionaries of each FSM accessed by the FSMs UID
 gTransitions = [] # Contains the transition dictionaries of each FSM accessed by the FSMs UID
 
-def _addToTempStates(stateFunc):
+def _addToTempStates(stateFunc, waitsForCallback):
     """
     Adds the passed state function to the internal states list.\n
     Throws an error if the state function is already imported or registered as a state.
@@ -18,7 +18,7 @@ def _addToTempStates(stateFunc):
     if transCache.get(stateFunc.__name__):
         raise ValueError("Passed transition " + stateFunc.__name__ + " is registered as a state.")
     
-    stateCache[stateFunc.__name__] = stateFunc
+    stateCache[stateFunc.__name__] = (stateFunc, waitsForCallback)
 
 def _addToTempTransitions(transFunc):
     """
@@ -34,15 +34,22 @@ def _addToTempTransitions(transFunc):
     
     transCache[transFunc.__name__] = transFunc
 
-def state(stateFunc):
+def state(waitsForCallback = False):
     """
     Decorator used to add the decorated method to the states list
     """
 
-    _addToTempStates(stateFunc)
-    return stateFunc
+    if callable(waitsForCallback):
+        _addToTempStates(waitsForCallback, False)
+        return waitsForCallback
 
-def transition(transFunc):
+    def wrapper(func):
+        _addToTempStates(func, waitsForCallback)
+        return func
+
+    return wrapper
+
+def transition(func):
     """
     Decorator used to add the decorated method to the transition list.
     All transition methods must return a boolean value, which determines 
@@ -51,5 +58,6 @@ def transition(transFunc):
     """ if isinstance(transFunc(), bool) is not True:
         raise ValueError("Transition \'" + transFunc.__name__ + "\' does not return a boolean to verify the transition.") """
 
-    _addToTempTransitions(transFunc)
-    return transFunc
+    _addToTempTransitions(func)
+        
+    return func
