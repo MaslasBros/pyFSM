@@ -94,8 +94,8 @@ class FSM:
         If the passed transition is None, then the state transition is instant.
         """
 
-        cStateName = currentState[0].__name__
-        nStateName = nextState[0].__name__
+        cStateName = currentState[0].__name__ if isinstance(currentState, tuple) else currentState.__name__
+        nStateName = nextState[0].__name__ if isinstance(nextState, tuple) else nextState.__name__
 
         #Checks for None transition
         if transition is not None:
@@ -106,7 +106,7 @@ class FSM:
         gStates[self.uid][nStateName] = stateCache[nStateName]
         
         #Create the state-transition pairs
-        self._statePairs.append((currentState[0], nextState[0], transition))
+        self._statePairs.append((gStates[self.uid][cStateName], gStates[self.uid][nStateName], transition))
 
         #Create the dynamic methods for the two new states
         if getattr(self,cStateName, self._dynamicMethodWrapper(gStates[self.uid][cStateName])) is not None:

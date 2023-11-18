@@ -85,6 +85,18 @@ def _start_():
     toShoot = 5
 
     fsm = FSM(idle)
+    #Classic declaration of states
+    fsm.createTransition(idle, load, loading)
+    fsm.createTransition(load, aim, aiming)
+    fsm.createTransition(aim, fire)
+    fsm.createTransition(fire, idle)
+
+    fsm.fire(toShoot)
+    fsm.continueTraversal() #CB for Load
+    fsm.continueTraversal() #CB for Fire
+    fsm.idle()
+
+    #The same using the Mermaid Parser
     fsm.createTransitionsFromDiagram(_stateDiagramTest)
 
     #Simulating of the callback from an external call

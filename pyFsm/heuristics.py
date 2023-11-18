@@ -10,8 +10,8 @@ def buildStateGraph(statePairs:[]) -> dict:
     
     stateGraph = {}
     for state, nextState, trans in statePairs:
-        stateName = state.__name__
-        nextStateName = nextState.__name__
+        stateName = state.__name__ if not isinstance(state, tuple) else state[0].__name__
+        nextStateName = nextState.__name__ if not isinstance(nextState, tuple) else nextState[0].__name__
         transName = trans.__name__ if trans is not None else None
 
         if stateName not in stateGraph:
