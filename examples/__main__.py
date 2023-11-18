@@ -17,7 +17,12 @@ def loading():
 @transition
 def aiming():
     print("Aiming...")
-    sleep(2)
+    i = 0
+    while i <= 3:
+        print(i)
+        i+=1
+        sleep(1)
+        
     pass
 
 # The FSM states
@@ -26,17 +31,17 @@ def idle():
     print("Idling...")
     pass
 
-@state
+@state(True)
 def fire(shots):
     print("{} Shots fired!".format(shots))
     pass
 
 @state
-def aim():
+def aim():   
     print("Aimed.")
     pass
 
-@state
+@state(True)
 def load():
     print("Loaded")
     pass
@@ -46,6 +51,7 @@ def release():
     print("Released")
     pass
 
+#Callbacks
 def callOnStateReached():
     print("Reached a state")
     pass
@@ -69,7 +75,6 @@ _stateDiagramTest = """
         ---
         stateDiagram-v2
             idle --> load: "loading"
-            idle --> release
             load --> aim: "aiming"
             aim --> fire
             fire --> idle
@@ -77,12 +82,19 @@ _stateDiagramTest = """
 
 def _start_():
     global toShoot 
-    toShoot = 2 
+    toShoot = 5
 
     fsm = FSM(idle)
     fsm.createTransitionsFromDiagram(_stateDiagramTest)
 
     fsm.fire(toShoot).idle().aim().fire(5).idle()
+
+    #Simulating of the callback from an external call
+    fsm.fire(toShoot)
+    fsm.continueTraversal() #CB for Load
+    fsm.continueTraversal() #CB for Fire
+    fsm.idle()
+
     pass
 
 if __name__ == '__main__':
