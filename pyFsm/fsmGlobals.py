@@ -20,7 +20,7 @@ def _addToTempStates(stateFunc, waitsForCallback):
     
     stateCache[stateFunc.__name__] = (stateFunc, waitsForCallback)
 
-def _addToTempTransitions(transFunc):
+def _addToTempTransitions(transFunc, waitsForCallback):
     """
     Adds the passed transition function to the internal transitions list.\n
     Throws an error if the transition function is already imported or registered as a state.
@@ -32,7 +32,7 @@ def _addToTempTransitions(transFunc):
     if stateCache.get(transFunc.__name__):
         raise ValueError("Passed transition " + transFunc.__name__ + " is registered as a state.")
     
-    transCache[transFunc.__name__] = transFunc
+    transCache[transFunc.__name__] = (transFunc, waitsForCallback)
 
 def state(waitsForCallback = False):
     """
@@ -49,15 +49,18 @@ def state(waitsForCallback = False):
 
     return wrapper
 
-def transition(func):
+def transition(waitsForCallback = False):
     """
     Decorator used to add the decorated method to the transition list.
-    All transition methods must return a boolean value, which determines 
+    All transition methods must return a boolean value, which determines
     """
 
-    """ if isinstance(transFunc(), bool) is not True:
-        raise ValueError("Transition \'" + transFunc.__name__ + "\' does not return a boolean to verify the transition.") """
+    if callable(waitsForCallback):
+        _addToTempTransitions(waitsForCallback, False)
+        return waitsForCallback
 
-    _addToTempTransitions(func)
-        
-    return func
+    def wrapper(func):
+        _addToTempTransitions(func, waitsForCallback)
+        return func
+
+    return wrapper
