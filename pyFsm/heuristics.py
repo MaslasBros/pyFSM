@@ -12,7 +12,12 @@ def buildStateGraph(statePairs:[]) -> dict:
     for state, nextState, trans in statePairs:
         stateName = state.__name__ if not isinstance(state, tuple) else state[0].__name__
         nextStateName = nextState.__name__ if not isinstance(nextState, tuple) else nextState[0].__name__
-        transName = trans.__name__ if trans is not None else None
+        #transName = trans.__name__ if trans is not None else None
+        transName = ''
+        if trans is not None:
+            transName = trans[0].__name__ if isinstance(trans, tuple) else trans.__name__
+        else:
+            transName = None
 
         if stateName not in stateGraph:
             stateGraph[stateName] = []

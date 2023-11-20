@@ -99,7 +99,8 @@ class FSM:
 
         #Checks for None transition
         if transition is not None:
-            gTransitions[self.uid][transition.__name__] = transCache[transition.__name__]
+            trName = transition[0].__name__ if isinstance(transition, tuple) else transition.__name__
+            gTransitions[self.uid][trName] = transCache[trName]
 
         #Register the retrieved states and transitions to this FSM instance
         gStates[self.uid][cStateName] = stateCache[cStateName]
@@ -172,7 +173,7 @@ class FSM:
         for stateTupple, trans in route:
             if trans is not None:
                 self._setInternalFsmState(FSMStates.IN_TRANSITION)
-                gTransitions[self.uid][trans]()
+                #gTransitions[self.uid][trans][0]()
                 self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
 
     
