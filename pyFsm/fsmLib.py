@@ -7,6 +7,8 @@ from .mermaidHandler import *
 
 #Python relative
 from enum import Enum
+import inspect
+from queue import Queue
 
 #region FSM Local
 class FSMStates(Enum):
@@ -65,6 +67,7 @@ class FSM:
         self.currentGraphState = self.initialState
         self._statePairs = []
         self._routes = {}
+        self._destQueue = Queue()
         self._cachedDestState = None
 
         #Merparser integration
@@ -135,20 +138,27 @@ class FSM:
         self.mermaidHandler.createTransitionsFromDiagram(mermaidDiagram)
         pass
 
-    def _dynamicMethodWrapper(self, stateFuncTupple):
+    def _dynamicMethodWrapper(self, stateFuncTuple):
         """
         This method is a state function wrapper to add the self return at each state method.\n
         This enables method piping support for the FSM.
         """
 
-        def wrapper(*args, **kwargs) -> self:
+        def wrapper(*args, **kwargs):
             #Do not continue on the next state if the currentState is waiting for a callback
             if self.getInternalFsmState() is FSMStates.WAITING_FOR_CB:
                 return
 
-            self._traverseToState(stateFuncTupple[0].__name__, *args, *kwargs)
-            return self
+            #Adds the called state to the transitions queue, this enables piping support.
+            return self._addToDestQueue(stateFuncTuple[0].__name__, *args, **kwargs)
         return wrapper
+
+    def _addToDestQueue(self, methodName:str, *args):
+        """
+        Adds the passed method string and its arguments to the _destQueue of the FSM.
+        """
+        self._destQueue.put((methodName, *args))
+        return self
 
     def _buildRoutesGraph(self):
         """
@@ -157,6 +167,20 @@ class FSM:
         
         graph = buildStateGraph(self._statePairs)
         self._routes = findShortestRoutes(graph)
+        pass
+
+    def run(self):
+        """
+        Call this method to start the FSM normal execution of states and transitioning.
+        """
+        
+        while not self._destQueue.qsize() == 0:
+            if self.getInternalFsmState() is FSMStates.WAITING_FOR_CB:
+                break
+
+            cState, *args = self._destQueue.get()
+            self._traverseToState(cState, *args)
+
         pass
 
     def _traverseToState(self, destStateName:str, *args, **kwargs):
@@ -173,9 +197,8 @@ class FSM:
         for stateTupple, trans in route:
             if trans is not None:
                 self._setInternalFsmState(FSMStates.IN_TRANSITION)
-                #gTransitions[self.uid][trans][0]()
+                gTransitions[self.uid][trans][0]()
                 self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
-
     
             self._setInternalFsmState(FSMStates.IN_RUNNING_STATE)
 
@@ -183,7 +206,11 @@ class FSM:
 
             if state.__name__ is destStateName:
                 self._eventHandler.raiseEvent(self.EVENT_DESTINATION_REACHED_NAME)
-                state(*args, **kwargs)
+                if inspect.signature(state).parameters:
+                    state(*args, **kwargs)
+                else:
+                    state()
+                self._cachedDestState = None
             else:
                 self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
                 state()
@@ -194,7 +221,7 @@ class FSM:
             #Do not continue on the next state if the currentState is waiting for a callback
             if wfc:
                 self._setInternalFsmState(FSMStates.WAITING_FOR_CB)
-                print("Waiting for state cb")
+                print("Waiting for callback...")
                 break
         pass
     
@@ -204,8 +231,13 @@ class FSM:
         the FSMs normal traversing flow. 
         '''
         
+        print("Callback received.")
         self._setInternalFsmState(FSMStates.IDLING)
-        self._traverseToState(self._cachedDestState[0], self._cachedDestState[1])
+
+        if self._cachedDestState == None:
+            self.run()
+        else:
+            self._traverseToState(self._cachedDestState[0], self._cachedDestState[1] if self._cachedDestState.__len__() > 1 else None)
         pass
 
     def _determineInternalFsmState(self):
