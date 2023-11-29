@@ -59,6 +59,7 @@ class FSM:
         The initial state must either be the state string name or the state function.
         """
 
+        self.uid = -1
         self._registerFsm()
         self._eventHandler = EventDispatcher(self.EVENT_STATE_REACHED_NAME, self.EVENT_DESTINATION_REACHED_NAME)
         self._fsmInternalState = FSMStates.IN_INITIAL_STATE
@@ -173,7 +174,6 @@ class FSM:
         """
         Call this method to start the FSM normal execution of states and transitioning.
         """
-        
         while not self._destQueue.qsize() == 0:
             if self.getInternalFsmState() is FSMStates.WAITING_FOR_CB:
                 break
@@ -194,45 +194,50 @@ class FSM:
         #print("Route to {} is {}".format(destStateName, str(route)))
 
         #iterates in the state-transition tuples inside the route queue
-        for stateTupple, trans in route:
-            if trans is not None:
+        for stateTupple, transTuple in route:
+            #Transition handling
+            if transTuple is not None:
                 self._setInternalFsmState(FSMStates.IN_TRANSITION)
-                gTransitions[self.uid][trans][0]()
+                trans, wfc = gTransitions[self.uid][transTuple]
+                trans()
                 self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
     
             self._setInternalFsmState(FSMStates.IN_RUNNING_STATE)
 
+            #State handling
             state, wfc = gStates[self.uid][stateTupple]
+            self.currentGraphState = state.__name__
 
             if state.__name__ is destStateName:
                 self._eventHandler.raiseEvent(self.EVENT_DESTINATION_REACHED_NAME)
+                self._cachedDestState = None
+                
                 if inspect.signature(state).parameters:
                     state(*args, **kwargs)
                 else:
                     state()
-                self._cachedDestState = None
+                    
             else:
                 self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
                 state()
 
-            self.currentGraphState = state.__name__
             self._determineInternalFsmState()
 
             #Do not continue on the next state if the currentState is waiting for a callback
             if wfc:
                 self._setInternalFsmState(FSMStates.WAITING_FOR_CB)
-                print("Waiting for callback...")
                 break
         pass
     
-    def continueTraversal(self):
+    def nextState(self):
         '''
         Pass this method as a callback function to an external source to continue with
         the FSMs normal traversing flow. 
         '''
         
         print("Callback received.")
-        self._setInternalFsmState(FSMStates.IDLING)
+
+        print(self._cachedDestState)
 
         if self._cachedDestState == None:
             self.run()

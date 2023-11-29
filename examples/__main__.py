@@ -7,6 +7,8 @@ sys.path.append(src_dir)
 from pyFsm import *
 from time import sleep
 
+myFsm = None
+
 #The FSM transitions
 @transition
 def loading():
@@ -34,6 +36,7 @@ def idle():
 @state(True)
 def fire(shots):
     print("{} Shots fired!".format(shots))
+    myFsm.nextState()
     pass
 
 @state
@@ -44,6 +47,7 @@ def aim():
 @state(True)
 def load():
     print("Loaded")
+    myFsm.nextState()
     pass
 
 @state
@@ -84,22 +88,16 @@ def _start_():
     global toShoot 
     toShoot = 5
 
-    fsm = FSM(idle)
+    global myFsm 
+    myFsm = FSM(idle)
 
     #The same using the Mermaid Parser
-    fsm.createTransitionsFromDiagram(_stateDiagramTest)
+    myFsm.createTransitionsFromDiagram(_stateDiagramTest)
 
     #Simulating of the callback from an external call
-    fsm.fire(toShoot).aim().fire(17).idle()
+    myFsm.fire(toShoot).idle().fire(17).aim()
 
-    fsm.run()
-
-    #Simulating external calls
-    fsm.continueTraversal()
-    fsm.continueTraversal()
-    fsm.continueTraversal()
-    fsm.continueTraversal()
-    fsm.continueTraversal()
+    myFsm.run()
 
     print("YES!")
 
