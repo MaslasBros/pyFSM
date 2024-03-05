@@ -1,13 +1,13 @@
 #FSM Relative
-from .fsmGlobals import *
-from .heuristics import *
-from .eventHandler import *
+from . import fsmGlobals as globals
+from . import heuristics as sort
+from . import eventHandler as events
 #Merparser integration
-from .mermaidHandler import *
+from . import mermaidHandler as merParser
 
 #Python relative
-from enum import Enum
 import inspect
+from enum import Enum
 from queue import Queue
 
 #region FSM Local
@@ -61,7 +61,7 @@ class FSM:
 
         self.uid = -1
         self._registerFsm()
-        self._eventHandler = EventDispatcher(self.EVENT_STATE_REACHED_NAME, self.EVENT_DESTINATION_REACHED_NAME)
+        self._eventHandler = events.EventDispatcher(self.EVENT_STATE_REACHED_NAME, self.EVENT_DESTINATION_REACHED_NAME)
         self._fsmInternalState = FSMStates.IN_INITIAL_STATE
 
         self.initialState = initialState.__name__ if not isinstance(initialState, str) else initialState
@@ -72,7 +72,7 @@ class FSM:
         self._cachedDestState = None
 
         #Merparser integration
-        self.mermaidHandler = MermaidHandler(self)
+        self.mermaidHandler = merParser.MermaidHandler(self)
         pass
 
     def _registerFsm(self):
@@ -82,14 +82,14 @@ class FSM:
         Raises an error in case the FSM is already registered.
         """
         
-        self.uid = len(fsms)
+        self.uid = len(globals.fsms)
 
-        if fsms.get(self.uid):
+        if globals.fsms.get(self.uid):
             raise KeyError("FSM with UID: " + self.uid + " already registered.")
         
-        fsms[self.uid] = self
-        gStates.append({})
-        gTransitions.append({})
+        globals.fsms[self.uid] = self
+        globals.gStates.append({})
+        globals.gTransitions.append({})
         pass
 
     def createTransition(self, currentState, nextState, transition = None):
@@ -104,21 +104,21 @@ class FSM:
         #Checks for None transition
         if transition is not None:
             trName = transition[0].__name__ if isinstance(transition, tuple) else transition.__name__
-            gTransitions[self.uid][trName] = transCache[trName]
+            globals.gTransitions[self.uid][trName] = globals.transCache[trName]
 
         #Register the retrieved states and transitions to this FSM instance
-        gStates[self.uid][cStateName] = stateCache[cStateName]
-        gStates[self.uid][nStateName] = stateCache[nStateName]
+        globals.gStates[self.uid][cStateName] = globals.stateCache[cStateName]
+        globals.gStates[self.uid][nStateName] = globals.stateCache[nStateName]
         
         #Create the state-transition pairs
-        self._statePairs.append((gStates[self.uid][cStateName], gStates[self.uid][nStateName], transition))
+        self._statePairs.append((globals.gStates[self.uid][cStateName], globals.gStates[self.uid][nStateName], transition))
 
         #Create the dynamic methods for the two new states
-        if getattr(self,cStateName, self._dynamicMethodWrapper(gStates[self.uid][cStateName])) is not None:
-            setattr(self, cStateName, self._dynamicMethodWrapper(gStates[self.uid][cStateName]))
+        if getattr(self,cStateName, self._dynamicMethodWrapper(globals.gStates[self.uid][cStateName])) is not None:
+            setattr(self, cStateName, self._dynamicMethodWrapper(globals.gStates[self.uid][cStateName]))
 
-        if getattr(self, nStateName, self._dynamicMethodWrapper(gStates[self.uid][nStateName])) is not None:
-            setattr(self, nStateName, self._dynamicMethodWrapper(gStates[self.uid][nStateName]))
+        if getattr(self, nStateName, self._dynamicMethodWrapper(globals.gStates[self.uid][nStateName])) is not None:
+            setattr(self, nStateName, self._dynamicMethodWrapper(globals.gStates[self.uid][nStateName]))
 
         self._buildRoutesGraph()
 
@@ -166,8 +166,8 @@ class FSM:
         Creates the routes graph containing all possible state transitions along with their shortest routes and transitions.
         """
         
-        graph = buildStateGraph(self._statePairs)
-        self._routes = findShortestRoutes(graph)
+        graph = sort.buildStateGraph(self._statePairs)
+        self._routes = sort.findShortestRoutes(graph)
         pass
 
     def run(self):
@@ -198,14 +198,14 @@ class FSM:
             #Transition handling
             if transTuple is not None:
                 self._setInternalFsmState(FSMStates.IN_TRANSITION)
-                trans, wfc = gTransitions[self.uid][transTuple]
+                trans, wfc = globals.gTransitions[self.uid][transTuple]
                 trans()
                 self._eventHandler.raiseEvent(self.EVENT_STATE_REACHED_NAME)
     
             self._setInternalFsmState(FSMStates.IN_RUNNING_STATE)
 
             #State handling
-            state, wfc = gStates[self.uid][stateTupple]
+            state, wfc = globals.gStates[self.uid][stateTupple]
             self.currentGraphState = state.__name__
 
             if state.__name__ is destStateName:
@@ -234,10 +234,6 @@ class FSM:
         Pass this method as a callback function to an external source to continue with
         the FSMs normal traversing flow. 
         '''
-        
-        print("Callback received.")
-
-        print(self._cachedDestState)
 
         if self._cachedDestState == None:
             self.run()
@@ -268,13 +264,13 @@ class FSM:
         """
         self._setInternalFsmState(FSMStates.IDLING)
         self.currentGraphState = stateName
-        gStates[self.uid][self.currentGraphState][0](*args, **kwargs)
+        globals.gStates[self.uid][self.currentGraphState][0](*args, **kwargs)
 
     def forceResetFSM(self):
         """
         Forcefully reset the FSM without traversing from the current state back to the initial state.
         """
-        gStates[self.uid][self.initialState]()
+        globals.gStates[self.uid][self.initialState]()
         self.currentGraphState = self.initialState
         pass
 #endregion

@@ -1,7 +1,8 @@
 from .fsmGlobals import *
+from .fsmLib import *
 
 #Merparser import
-from .pyStateGram import *
+from .pyStateGram.pystategram import *
 
 class MermaidHandler:
     """
@@ -12,7 +13,7 @@ class MermaidHandler:
         """
         Creates a MermaidHandler instance and assigns the passed FSM as its FSM handler.
         """
-        self.ownFsm = ownFsm
+        self.ownFsm = ownFsm #type: FSM
         self.package = None #type: DiagramPackage
         pass
 

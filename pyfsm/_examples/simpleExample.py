@@ -1,10 +1,5 @@
-import sys
-import os
-
-src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(src_dir)
-
-from pyFsm import *
+from pyfsm.fsmLib import *
+from pyfsm.fsmGlobals import *
 from time import sleep
 
 myFsm = None
@@ -72,18 +67,6 @@ def callOnDestReached2():
     print("Reached the destination2")
     pass
 
-#Merparser Test
-_stateDiagramTest = """
-        ---
-        title: Simple sample
-        ---
-        stateDiagram-v2
-            idle --> load: "loading"
-            load --> aim: "aiming"
-            aim --> fire
-            fire --> idle
-        """
-
 def _start_():
     global toShoot 
     toShoot = 5
@@ -91,11 +74,13 @@ def _start_():
     global myFsm 
     myFsm = FSM(idle)
 
-    #The same using the Mermaid Parser
-    myFsm.createTransitionsFromDiagram(_stateDiagramTest)
+    myFsm.createTransition(idle, load, loading)
+    myFsm.createTransition(load, aim, aiming)
+    myFsm.createTransition(aim, fire)
+    myFsm.createTransition(fire, idle)
 
     #Simulating of the callback from an external call
-    myFsm.fire(toShoot).idle().fire(17).aim()
+    myFsm.fire(toShoot).idle().fire(17).aim().idle()
 
     myFsm.run()
 
