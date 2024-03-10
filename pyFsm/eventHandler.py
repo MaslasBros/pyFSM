@@ -8,7 +8,7 @@ class EventDispatcher:
         Constructs an event dispatcher instance with no events.
 
         Args:
-            eventNames:
+            eventNames (:class:`str`): The events to create
         """
         
         self.handlers = self._createEvents(*eventNames)
