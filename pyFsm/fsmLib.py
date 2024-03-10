@@ -56,30 +56,56 @@ class FSM:
     def __init__(self, initialState):
         """
         Constructs a FSM instance with empty states and transitions.\n
-        The initial state must either be the state string name or the state function.
+        
+        Args:
+           initialState (:class:`str` or `func`): The initial state must either be the state string name or the state function.
+
+        Attributes:
+            ~ pyFsm.fsmLib.FSM.uid: The FSM assigned to this fsm
+            ~ pyFsm.fsmLib.FSM._eventHandler: The FSM event handler
+            ~ pyFsm.fsmLib.FSM._fsmInternalState: The FSM `FSMStates` state for FSM management
+            ~ pyFsm.fsmLib.FSM.initialState: The FSM initial state given from the constructor
+            ~ pyFsm.fsmLib.FSM.currentGraphState: The same as `initialState`
+            ~ pyFsm.fsmLib.FSM._statePairs: The state-transition pairs of this FSM
+            ~ pyFsm.fsmLib.FSM._routes: The state to state shortest routes.
+            ~ pyFsm.fsmLib.FSM._destQueue: The destination state name when transitions from state to state.
+            ~ pyFsm.fsmLib.FSM._destQueue: A queue used in conjuction with the nextState method to cache the states that must be passed until the destination state is reached.
+            ~ pyFsm.fsmLib.FSM.mermaidHandler: The `MermaidHandler` of this FSM used for Mermaid JS parsing.
         """
 
         self.uid = -1
+        """The FSM id"""
         self._registerFsm()
         self._eventHandler = events.EventDispatcher(self.EVENT_STATE_REACHED_NAME, self.EVENT_DESTINATION_REACHED_NAME)
+        """The FSM event handler"""
         self._fsmInternalState = FSMStates.IN_INITIAL_STATE
+        """The FSM `FSMStates` state for FSM management"""
 
         self.initialState = initialState.__name__ if not isinstance(initialState, str) else initialState
+        """The FSM initial state given from the constructor"""
         self.currentGraphState = self.initialState
+        """The current state the FSM is in until it reaches the destination state"""
         self._statePairs = []
+        """The state-transition pairs of this FSM"""
         self._routes = {}
-        self._destQueue = Queue()
+        """The state to state shortest routes."""
         self._cachedDestState = None
+        """The destination state name when transitions from state to state."""
+        self._destQueue = Queue()
+        """A queue used in conjuction with the nextState method to cache the states that must be passed until the destination state is reached."""
 
         #Merparser integration
         self.mermaidHandler = merParser.MermaidHandler(self)
+        """The `MermaidHandler` of this FSM"""
         pass
 
     def _registerFsm(self):
         """
         Registers the FSM instance to the global FSM cache of the script.\n
         The UID of the FSM is also assigned here.\n
-        Raises an error in case the FSM is already registered.
+
+        Raises:
+            (:class:`KeyError`): In case the FSM is already registered.
         """
         
         self.uid = len(globals.fsms)
@@ -96,6 +122,11 @@ class FSM:
         """
         Creates a new state transition which the current state transits to the next state through the passed transition.\n
         If the passed transition is None, then the state transition is instant.
+
+        Args:
+            currentState (:class:`tuple` or `func`): The source state function
+            nextState (:class:`tuple` or `func`): The target state function
+            transition (:class:`tuple` or `func`, default = None): The transition function, if any
         """
 
         cStateName = currentState[0].__name__ if isinstance(currentState, tuple) else currentState.__name__
@@ -135,14 +166,20 @@ class FSM:
             idle --> release - state transitions with no transition method \n
             load --> aim: "aiming" - state transition with a transition method named "aiming" \n
         ```
+
+        Args:
+            mermaidDiagram (:class:`str`): The mermaid diagram to parse
         """
         self.mermaidHandler.createTransitionsFromDiagram(mermaidDiagram)
         pass
 
     def _dynamicMethodWrapper(self, stateFuncTuple):
         """
-        This method is a state function wrapper to add the self return at each state method.\n
+        This method is a state function wrapper to add the `self return` at each state method.\n
         This enables method piping support for the FSM.
+
+        Args:
+            stateFuncTuple (:class:`tuple`): Tuple containg the state current-next state pairs.
         """
 
         def wrapper(*args, **kwargs):
@@ -157,6 +194,10 @@ class FSM:
     def _addToDestQueue(self, methodName:str, *args):
         """
         Adds the passed method string and its arguments to the _destQueue of the FSM.
+        
+        Args:
+            methodName (:class:`str`): The method name to add to the destination queue
+            args: The arguments to pass to the method.
         """
         self._destQueue.put((methodName, *args))
         return self
@@ -185,8 +226,14 @@ class FSM:
 
     def _traverseToState(self, destStateName:str, *args, **kwargs):
         """
-        Traverses to the passed destination state from the current state the FSM is at.\n
-        Args and kwargs are passed only in the requested destination state and not in the states in-between.\n
+        Traverses to the passed destination state from the current state the FSM is at.
+
+        * Args and kwargs are passed only in the requested destination state and not in the states in-between.
+
+        Args:
+            destStateName (:class:`str`): The state to traverse to.
+            args: The arguments to pass to the destination method.
+            kwargs: The arguments to pass to the destination method.
         """
         
         self._cachedDestState = (destStateName, *args, *kwargs)
@@ -254,6 +301,9 @@ class FSM:
     def _setInternalFsmState(self, newState:FSMStates):
         """
         Sets the internal FSM state to the passed value
+
+        Args:
+            newState (:enum:`FSMStates`): The new state
         """
         self._fsmInternalState = newState 
         pass
@@ -261,6 +311,11 @@ class FSM:
     def forceChangeState(self, stateName:str, *args, **kwargs):
         """
         Forcefully call and set the current state of the FSM to the passed state name.
+
+        Args:
+            stateName (:class:`str`): The state to change into the FSM current state into.
+            args: The arguments to pass to the state method.
+            kwargs: The arguments to pass to the state method.
         """
         self._setInternalFsmState(FSMStates.IDLING)
         self.currentGraphState = stateName
@@ -268,7 +323,7 @@ class FSM:
 
     def forceResetFSM(self):
         """
-        Forcefully reset the FSM without traversing from the current state back to the initial state.
+        Forcefully reset the FSM without traversing from the current state back to the initial state of the FSM.
         """
         globals.gStates[self.uid][self.initialState]()
         self.currentGraphState = self.initialState
