@@ -12,6 +12,13 @@ class MermaidHandler:
     def __init__(self, ownFsm):
         """
         Creates a MermaidHandler instance and assigns the passed FSM as its FSM handler.
+
+        Args:
+            ownFsm (:class:`FSM`): The FSM instance caching this MermaidHandler instance.
+
+        Attributes:
+            ~ pyfsm.mermaidHandler.MermaidHandler.ownFsm (:class:`FSM`): The FSM instance caching this MermaidHandler instance.
+            ~ pyfsm.mermaidHandler.MermaidHandler.package (:class:`DiagramPackage`): The FSM instance caching this MermaidHandler instance.
         """
         self.ownFsm = ownFsm #type: FSM
         self.package = None #type: DiagramPackage
@@ -19,15 +26,19 @@ class MermaidHandler:
 
     def createTransitionsFromDiagram(self, mermaidDiagram:str):
         """
-        Dynamically creates the states and transitions from the provided mermaid diagram.\n
-        Diagram Sample:\n
+        Dynamically creates the states and transitions from the provided mermaid diagram.
+        
+        Diagram Sample:
         
         ```text
-        stateDiagram-v2\n
-            idle --> load: "loading" - state transition with a transition method named "loading" \n
-            idle --> release - state transitions with no transition method \n
-            load --> aim: "aiming" - state transition with a transition method named "aiming" \n
+            stateDiagram-v2\n
+                idle --> load: "loading" - state transition with a transition method named "loading" \n
+                idle --> release - state transitions with no transition method \n
+                load --> aim: "aiming" - state transition with a transition method named "aiming" \n
         ```
+
+        Args:
+            mermaidDiagram (:class:`str`): The mermaid diagram to parse.
         """
     
         self.package = parseStateDiagram(mermaidDiagram)
@@ -41,7 +52,19 @@ class MermaidHandler:
         pass
 
     def accessMermaidDiagram(self) -> DiagramPackage:
-        """Returns the parsed mermaid diagram package."""
+        """
+        Returns the parsed mermaid diagram package.
+
+        For better accessing use the below (:class:`funcs`):
+
+            `MermaidHandler.accessMermaidDiagramStates`
+            
+            `MermaidHandler.accessMermaidDiagramTransitions`
+
+        
+        Returns:
+            A `DiagramPackage` instance containing the states and transitions.
+        """
         return self.package
 
     def accessMermaidDiagramStates(self) -> dict:

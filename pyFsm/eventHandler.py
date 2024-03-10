@@ -1,18 +1,25 @@
 class EventDispatcher:
     """
-    Simple implementation of an event dispatcher.
+    Simple implementation of an event dispatcher to handle FSM events.
     """
     
     def __init__(self, *eventNames:str):
         """
         Constructs an event dispatcher instance with no events.
+
+        Args:
+            eventNames:
         """
         
         self.handlers = self._createEvents(*eventNames)
+        """The event handlers"""
 
     def _createEvents(self, *eventNames:str) -> dict:
         """
         Creates the requested events in the event dispatcher registry.
+
+        Args:
+            eventNames (:class:`str`): The event names
         """
 
         temp = {}
@@ -24,6 +31,10 @@ class EventDispatcher:
     def subscribeToEvent(self, eventName:str, *method):
         """
         Adds the passed handler methods to the passed event.
+
+        Args:
+            eventName (:class:`str`): The event name
+            method (:class:`func`): The method to add to this event
         """
 
         for func in method:
@@ -33,6 +44,9 @@ class EventDispatcher:
     def raiseEvent(self, eventName:str):
         """
         Raises the requested event.
+
+        Args:
+            eventName (:class:`str`): The event name.
         """
 
         if eventName in self.handlers:
