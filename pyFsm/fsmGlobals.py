@@ -1,15 +1,26 @@
-fsms = {} # Stores every fsm with a unique ID
+fsms = {}
+"""Stores every fsm with a unique ID"""
 
-stateCache = {} # Stores the registered state methods
-transCache = {} # stores the registered transitions methods
+stateCache = {}
+"""Stores the registered state methods"""
+transCache = {}
+"""Stores the registered transitions methods"""
 
-gStates = [] # Contains the state dictionaries of each FSM accessed by the FSMs UID
-gTransitions = [] # Contains the transition dictionaries of each FSM accessed by the FSMs UID
+gStates = []
+"""Contains the state dictionaries of each FSM accessed by the FSMs UID"""
+gTransitions = []
+"""Contains the transition dictionaries of each FSM accessed by the FSMs UID"""
 
 def _addToTempStates(stateFunc, waitsForCallback):
     """
-    Adds the passed state function to the internal states list.\n
-    Throws an error if the state function is already imported or registered as a state.
+    Adds the passed state function to the internal states list.
+
+    Args:
+        stateFunc (:class:`func`): The function containing the state logic.
+        waitsForCallback (:class:`bool`): Whether the FSM should wait for the callNextState callback to continue execution.
+
+    Raises:
+        (:class:`ValueError`): if the state function is already imported or registered as a state.
     """
 
     if stateCache.get(stateFunc.__name__):
@@ -22,8 +33,14 @@ def _addToTempStates(stateFunc, waitsForCallback):
 
 def _addToTempTransitions(transFunc, waitsForCallback):
     """
-    Adds the passed transition function to the internal transitions list.\n
-    Throws an error if the transition function is already imported or registered as a state.
+    Adds the passed transition function to the internal transitions list.
+
+    Args:
+        transFunc (:class:`func`): The function containing the transition logic.
+        waitsForCallback (:class:`bool`): Whether the FSM should wait for the callNextState callback to continue execution.
+
+    Raises:
+        (:class:`ValueError`): if the transition function is already imported or registered as a state.
     """
 
     if transCache.get(transFunc.__name__):
@@ -36,7 +53,10 @@ def _addToTempTransitions(transFunc, waitsForCallback):
 
 def state(waitsForCallback = False):
     """
-    Decorator used to add the decorated method to the states list
+    Decorator used to add the decorated method to the states list.
+
+    Args:
+        waitsForCallback(:class:`bool`, default = False): Whether the FSM should wait for the callNextState callback to continue execution.
     """
 
     if callable(waitsForCallback):
@@ -52,7 +72,9 @@ def state(waitsForCallback = False):
 def transition(waitsForCallback = False):
     """
     Decorator used to add the decorated method to the transition list.
-    All transition methods must return a boolean value, which determines
+
+    Args:
+        waitsForCallback(:class:`bool`, default = False): Whether the FSM should wait for the callNextState callback to continue execution.
     """
 
     if callable(waitsForCallback):
